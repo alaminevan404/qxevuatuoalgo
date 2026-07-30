@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quotex Bot Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;margin:0}
+    .bg-hero{background:linear-gradient(135deg,#021B3A 0%,#022B5B 50%,#003E7E 100%);min-height:100vh}
+    .card{background:white;border-radius:12px;padding:1rem;box-shadow:0 10px 30px rgba(2,6,23,0.35)}
+    .masked{letter-spacing:3px}
+    @keyframes shake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(2px)}30%,50%,70%{transform:translateX(-4px)}40%,60%{transform:translateX(4px)}}
+  </style>
+</head>
+<body class="bg-hero">
+  <!-- Configuration variables (edit before deploy) -->
+  <script>
+    // Set your deployment API base URL here (include /api)
+    const API_BASE_URL = 'https://YOUR_VERCEL_URL.vercel.app/api';
+    // For demo/admin UI convenience these are exposed here. Change before production.
+    const ADMIN_PASSWORD = 'admin123';
+    const API_SECRET_KEY = 'admin123';
+  </script>
+
+  <div id="app" class="min-h-screen flex items-center justify-center p-4">
+    <!-- Login View -->
+    <div id="loginView" class="w-full max-w-md">
+      <div class="card text-center">
+        <h1 class="text-2xl font-bold mb-4">Quotex Bot Admin</h1>
+        <p class="text-sm text-gray-600 mb-6">Enter admin password to continue.</p>
+        <input id="adminPass" type="password" placeholder="Admin password"
+               class="w-full px-4 py-3 border rounded-md mb-4 focus:outline-none" />
+        <button id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-md transition">Login</button>
+        <p class="text-xs text-gray-500 mt-3">Default password: <strong>admin123</strong></p>
+      </div>
+    </div>
+
+    <!-- Dashboard View -->
+    <div id="dashboardView" class="hidden w-full max-w-6xl">
+      <div class="w-full">
+        <nav class="flex items-center justify-between mb-6 text-white">
+          <div class="flex items-center gap-4">
+            <div class="text-xl font-bold">Quotex Bot Admin</div>
+          </div>
+          <div class="flex items-center gap-3">
+            <button id="bookmarkletBtn" class="px-3 py-2 bg-white/10 rounded hover:bg-white/20 transition">Get Bookmarklet Code</button>
+            <button id="logoutBtn" class="px-3 py-2 bg-red-500 hover:bg-red-600 rounded transition">Logout</button>
+          </div>
+        </nav>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="card flex items-center gap-4">
+            <div class="p-3 rounded-full bg-blue-100 text-blue-700">
+              <svg width="24" height="24" fill="currentColor"><path d="M12 2L3 7v7c0 5 3.58 9.74 9 13 5.42-3.26 9-8 9-13V7l-9-5z"/></svg>
+            </div>
+            <div>
+              <div class="text-sm text-gray-500">Total Keys</div>
+              <div id="statTotal" class="text-2xl font-bold">—</div>
+            </div>
+          </div>
+
+          <div class="card flex items-center gap-4">
+            <div class="p-3 rounded-full bg-green-100 text-green-700">
+              <svg width="24" height="24" fill="currentColor"><path d="M12 2L3 7v7c0 5 3.58 9.74 9 13 5.42-3.26 9-8 9-13V7l-9-5z"/></svg>
+            </div>
+            <div>
+              <div class="text-sm text-gray-500">Active Keys</div>
+              <div id="statActive" class="text-2xl font-bold">—</div>
+            </div>
+          </div>
+
+          <div class="card flex items-center gap-4">
+            <div class="p-3 rounded-full bg-purple-100 text-purple-700">
+              <svg width="24" height="24" fill="currentColor"><path d="M12 2L3 7v7c0 5 3.58 9.74 9 13 5.42-3.26 9-8 9-13V7l-9-5z"/></svg>
+            </div>
+            <div>
+              <div class="text-sm text-gray-500">Today's Trades</div>
+              <div id="statTrades" class="text-2xl font-bold">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+          <div class="card col-span-1">
+            <h3 class="font-semibold mb-3">Generate New Key</h3>
+            <div class="space-y-3">
+              <label class="text-xs text-gray-500">Max Devices</label>
+              <input id="genMaxDevices" type="number" value="1" min="1" class="w-full px-3 py-2 border rounded" />
+              <label class="text-xs text-gray-500">Expiry Days</label>
+              <input id="genExpiry" type="number" value="30" min="1" class="w-full px-3 py-2 border rounded" />
+              <div class="flex gap-2">
+                <button id="genBtn" class="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition">
+                  <span id="genSpinner" class="hidden">⏳</span> Generate New Key
+                </button>
+                <button id="exportCsv" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Export CSV</button>
+              </div>
+              <div class="mt-2">
+                <input id="generatedKey" readonly class="w-full px-3 py-2 border rounded" placeholder="Generated key will appear here" />
+                <div class="flex justify-end mt-2">
+                  <button id="copyGenerated" class="px-3 py-1 bg-blue-600 text-white rounded">Copy</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card lg:col-span-2">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold">Keys</h3>
+              <div class="flex items-center gap-2">
+                <input id="searchInput" type="text" placeholder="Search key or created_by" class="px-3 py-2 border rounded" />
+              </div>
+            </div>
+
+            <div id="keysTableWrapper" class="overflow-x-auto">
+              <table id="keysTable" class="w-full text-sm">
+                <thead>
+                  <tr class="text-left text-gray-500">
+                    <th class="py-2">Licence Key</th>
+                    <th>Status</th>
+                    <th>Devices</th>
+                    <th>Expiry</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="keysTbody">
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between">
+              <div id="emptyState" class="text-gray-500 hidden">No keys found.</div>
+              <div class="flex items-center gap-2">
+                <button id="prevPage" class="px-3 py-1 bg-gray-200 rounded">Prev</button>
+                <div id="pageInfo" class="text-sm text-gray-600">Page 1</div>
+                <button id="nextPage" class="px-3 py-1 bg-gray-200 rounded">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Bookmarklet Modal -->
+  <div id="bookmarkletModal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4">
+    <div class="bg-white rounded p-4 w-full max-w-2xl">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-bold">Bookmarklet Code & Instructions</h3>
+        <button id="closeBookmarklet" class="text-gray-500">Close</button>
+      </div>
+      <p class="text-sm text-gray-600 mb-2">Replace API_BASE_URL if needed. Click copy to copy the javascript bookmarklet.</p>
+      <textarea id="bookmarkletArea" rows="10" class="w-full p-2 border rounded font-mono text-xs"></textarea>
+      <div class="mt-3 flex gap-2 justify-end">
+        <button id="copyBookmarklet" class="px-3 py-1 bg-blue-600 text-white rounded">Copy Code</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toastContainer" style="position:fixed;right:20px;top:20px;z-index:60"></div>
+
+  <script>
+    // Simple toast
+    function toast(msg, type='info'){
+      const el = document.createElement('div');
+      el.className = 'mb-2 px-4 py-2 rounded shadow text-white';
+      el.style.background = type==='error'?'#ef4444':type==='success'?'#16a34a':'#0ea5e9';
+      el.innerText = msg;
+      document.getElementById('toastContainer').appendChild(el);
+      setTimeout(()=>el.remove(),3500);
+    }
+
+    // Auth
+    const adminKeyStorage = 'qbot_admin_key';
+    const loginView = document.getElementById('loginView');
+    const dashboardView = document.getElementById('dashboardView');
+    const loginBtn = document.getElementById('loginBtn');
+    const adminPassInput = document.getElementById('adminPass');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    function setLoggedIn(key){
+      sessionStorage.setItem(adminKeyStorage, key);
+      loginView.classList.add('hidden');
+      dashboardView.classList.remove('hidden');
+      loadStats();
+    }
+    function logout(){ sessionStorage.removeItem(adminKeyStorage); dashboardView.classList.add('hidden'); loginView.classList.remove('hidden'); }
+
+    loginBtn.addEventListener('click', ()=>{
+      const p = adminPassInput.value.trim();
+      if(!p){ adminPassInput.style.animation='shake .6s'; setTimeout(()=>adminPassInput.style.animation='',600); return; }
+      // Check password locally first
+      if(p === ADMIN_PASSWORD){ // set API secret for calls
+        setLoggedIn(API_SECRET_KEY);
+        toast('Logged in','success');
+      } else {
+        toast('Wrong password','error'); adminPassInput.style.animation='shake .6s'; setTimeout(()=>adminPassInput.style.animation='',600);
+      }
+    });
+
+    logoutBtn.addEventListener('click', ()=>logout());
+    const saved = sessionStorage.getItem(adminKeyStorage);
+    if(saved) setLoggedIn(saved);
+
+    // Stats and keys
+    let currentPage = 1; const perPage = 10;
+    async function loadStats(page=1){
+      const key = sessionStorage.getItem(adminKeyStorage);
+      if(!key) return;
+      try{
+        const res = await fetch(API_BASE_URL + '/stats?page='+page+'&per_page='+perPage, { headers: { 'x-api-key': key } });
+        if(!res.ok) throw new Error('Unauthorized');
+        const j = await res.json();
+        if(!j.success) { toast(j.message||'Failed','error'); return; }
+        document.getElementById('statTotal').innerText = j.total_keys;
+        document.getElementById('statActive').innerText = j.active_keys;
+        document.getElementById('statTrades').innerText = j.today_trades;
+        renderKeys(j.keys||[]);
+        document.getElementById('pageInfo').innerText = 'Page '+j.page;
+        currentPage = j.page;
+      }catch(e){ console.error(e); toast('Failed to load stats','error'); }
+    }
+
+    function maskKey(k){ if(!k) return ''; return k.slice(0,4)+'••••'+k.slice(-4); }
+    function renderKeys(keys){ const tbody = document.getElementById('keysTbody'); tbody.innerHTML=''; if(!keys||keys.length===0){ document.getElementById('emptyState').classList.remove('hidden'); return; } else document.getElementById('emptyState').classList.add('hidden');
+      keys.forEach(row=>{ const tr = document.createElement('tr'); const expires = row.expires_at?new Date(row.expires_at).toLocaleString():'Never'; const created = row.created_at?new Date(row.created_at).toLocaleString():'-'; const status = row.is_active? (row.expires_at && new Date(row.expires_at)<=new Date()? 'Expired':'Active') : 'Inactive'; const statusColor = status==='Active'?'bg-green-100 text-green-700':status==='Inactive'?'bg-red-100 text-red-700':'bg-yellow-100 text-yellow-700'; tr.innerHTML = `
+        <td class="py-2"><span class="masked" data-full="${row.licence_key}">${maskKey(row.licence_key)}</span> <button data-action="toggle-mask" class="ml-2 text-xs text-blue-600">Show</button></td>
+        <td><span class="px-2 py-1 text-xs rounded ${statusColor}">${status}</span></td>
+        <td>${row.used_devices||0}/${row.max_devices||1}</td>
+        <td>${expires}</td>
+        <td>${created}</td>
+        <td>
+          <button data-action="toggle" data-key="${row.licence_key}" class="px-2 py-1 bg-gray-100 rounded mr-2">Toggle</button>
+          <button data-action="delete" data-key="${row.licence_key}" class="px-2 py-1 bg-red-500 text-white rounded">Delete</button>
+        </td>`; tbody.appendChild(tr); }); }
+
+    document.getElementById('keysTbody').addEventListener('click', async (e)=>{
+      const btn = e.target.closest('button'); if(!btn) return; const action = btn.getAttribute('data-action'); const key = btn.getAttribute('data-key');
+      if(action==='toggle'){ const full = btn.getAttribute('data-key'); try{ const r = await fetch(API_BASE_URL + '/update-key',{ method:'PUT', headers:{ 'Content-Type':'application/json','x-api-key': sessionStorage.getItem(adminKeyStorage) }, body: JSON.stringify({ licence_key: full, is_active: true }) }); const j = await r.json(); if(j.success){ toast('Updated','success'); loadStats(currentPage); } else toast('Update failed','error'); }catch(e){console.error(e);toast('Update failed','error');} }
+      if(action==='delete'){ if(!confirm('Are you sure?')) return; try{ const r = await fetch(API_BASE_URL + '/delete-key',{ method:'DELETE', headers:{ 'Content-Type':'application/json','x-api-key': sessionStorage.getItem(adminKeyStorage) }, body: JSON.stringify({ licence_key: key }) }); const j = await r.json(); if(j.success){ toast('Deleted','success'); loadStats(currentPage); } else toast('Delete failed','error'); }catch(e){console.error(e);toast('Delete failed','error');} }
+    });
+
+    // Toggle mask
+    document.getElementById('keysTbody').addEventListener('click',(e)=>{
+      const t = e.target.closest('button[data-action="toggle-mask"]'); if(!t) return; const span = t.closest('td').querySelector('[data-full]'); if(!span) return; if(t.innerText==='Show'){ span.innerText = span.getAttribute('data-full'); t.innerText='Hide'; } else { span.innerText = maskKey(span.getAttribute('data-full')); t.innerText='Show'; }
+    });
+
+    // Pagination
+    document.getElementById('prevPage').addEventListener('click', ()=>{ if(currentPage>1) loadStats(currentPage-1); });
+    document.getElementById('nextPage').addEventListener('click', ()=>{ loadStats(currentPage+1); });
+
+    // Search
+    document.getElementById('searchInput').addEventListener('input',(e)=>{ const q=e.target.value.toLowerCase(); Array.from(document.querySelectorAll('#keysTbody tr')).forEach(r=>{ r.style.display = r.innerText.toLowerCase().includes(q)?'':'none'; }); });
+
+    // Generate key
+    document.getElementById('genBtn').addEventListener('click', async ()=>{
+      const max = Number(document.getElementById('genMaxDevices').value)||1; const days = Number(document.getElementById('genExpiry').value)||30; const key = sessionStorage.getItem(adminKeyStorage); if(!key){ toast('Not logged in','error'); return; }
+      const spinner = document.getElementById('genSpinner'); spinner.classList.remove('hidden');
+      try{
+        const res = await fetch(API_BASE_URL + '/generate-key', { method:'POST', headers:{ 'Content-Type':'application/json','x-api-key': key }, body: JSON.stringify({ max_devices: max, expires_days: days }) }); const j = await res.json(); spinner.classList.add('hidden'); if(j.success){ document.getElementById('generatedKey').value = j.licence_key; toast('Generated','success'); loadStats(1); } else { toast(j.message||'Failed','error'); }
+      }catch(e){ console.error(e); spinner.classList.add('hidden'); toast('Generate failed','error'); }
+    });
+
+    document.getElementById('copyGenerated').addEventListener('click', ()=>{ const v=document.getElementById('generatedKey').value; if(!v) return; navigator.clipboard.writeText(v).then(()=>toast('Copied','success')); });
+
+    // Export CSV
+    document.getElementById('exportCsv').addEventListener('click', async ()=>{
+      const key = sessionStorage.getItem(adminKeyStorage); try{ const r = await fetch(API_BASE_URL + '/stats?page=1&per_page=1000',{ headers:{ 'x-api-key': key }}); const j = await r.json(); if(!j.success) { toast('Export failed','error'); return; } const rows = j.keys || []; const csv = ['licence_key,is_active,used_devices,max_devices,expires_at,created_at,created_by'].concat(rows.map(r=>[r.licence_key,r.is_active,r.used_devices,r.max_devices,r.expires_at,r.created_at,`"${(r.created_by||'').replace(/"/g,'""')}"`].join(','))).join('\n'); const blob = new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='keys.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); toast('CSV exported','success'); }catch(e){console.error(e);toast('Export failed','error'); }
+    });
+
+    // Bookmarklet modal
+    const bookmarkletBtn = document.getElementById('bookmarkletBtn'); const bookmarkletModal = document.getElementById('bookmarkletModal'); const bookmarkletArea = document.getElementById('bookmarkletArea'); const closeBookmarklet = document.getElementById('closeBookmarklet'); const copyBookmarklet = document.getElementById('copyBookmarklet');
+    bookmarkletBtn.addEventListener('click', ()=>{ bookmarkletModal.classList.remove('hidden'); bookmarkletArea.value = buildBookmarklet(); }); closeBookmarklet.addEventListener('click', ()=>bookmarkletModal.classList.add('hidden'));
+    copyBookmarklet.addEventListener('click', ()=>{ navigator.clipboard.writeText(bookmarkletArea.value).then(()=>toast('Copied bookmarklet','success')); });
+
+    function buildBookmarklet(){
+      // Bookmarklet includes RSI(14), MACD(12,26,9) and Bollinger Bands(20,2) checks and verify-key call
+      const api = API_BASE_URL.replace(/\/$/, '');
+      const code = `javascript:(function(){const API='${api}';const KEY=localStorage.getItem('qbot_key');function verify(k,cb){fetch(API+'/verify-key',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({licence_key:k,device_id:navigator.userAgent})}).then(r=>r.json()).then(cb).catch(e=>{alert('Verify error');});}
+      function sma(arr,n){if(arr.length<n)return null;let s=0;for(let i=arr.length-n;i<arr.length;i++)s+=arr[i];return s/n}
+      function rsi(pr,p=14){if(pr.length<=p)return 50;let g=0,l=0;for(let i=pr.length-p+1;i<pr.length;i++){const d=pr[i]-pr[i-1];if(d>=0)g+=d;else l-=d;}const rs=g/(l||1);return 100-(100/(1+rs))}
+      function ema(pr,n){const k=2/(n+1);let e=pr[0];for(let i=1;i<pr.length;i++)e=pr[i]*k+(1-k)*e;return e}
+      function macd(pr,fast=12,slow=26){if(pr.length<slow)return 0;const fastE=ema(pr.slice(-fast),fast);const slowE=ema(pr.slice(-slow),slow);return fastE-slowE}
+      function bb(pr,period=20,m=2){if(pr.length<period)return null;const slice=pr.slice(-period);const s=slice.reduce((a,b)=>a+b,0)/period;const sd=Math.sqrt(slice.reduce((a,b)=>a+(b-s)*(b-s),0)/period);return {upper:s+m*sd,lower:s-m*sd,mid:s}}
+      function getPrices(){const els=document.querySelectorAll('[data-close],[class*=price]');const p=[];els.forEach(e=>{const v=parseFloat(e.getAttribute('data-close')||e.textContent);if(!isNaN(v))p.push(v);});return p}
+      function injectButton(){if(document.getElementById('qbot_btn'))return;const btn=document.createElement('div');btn.id='qbot_btn';btn.innerText='🤖 Start Bot';btn.style.cssText='position:fixed;bottom:20px;right:20px;z-index:99999;background:#4caf50;color:#fff;padding:12px 18px;border-radius:999px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,0.3)';document.body.appendChild(btn);let active=false,iv;btn.addEventListener('click',()=>{active=!active;if(active){btn.style.background='#f44336';btn.innerText='⏹ Stop';iv=setInterval(execute,10000);}else{btn.style.background='#4caf50';btn.innerText='🤖 Start Bot';clearInterval(iv);}})}
+      function execute(){const prices=getPrices();if(!prices||prices.length<30)return;const myrsi=rsi(prices,14);const mymacd=macd(prices,12,26);const mybb=bb(prices,20,2);let signal=null;let votes=0;if(myrsi<30){signal='call';votes++}else if(myrsi>70){signal='put';votes++}if(mymacd>0){signal=signal||'call';votes++}else if(mymacd<0){signal=signal||'put';votes++}if(mybb){const last=prices[prices.length-1]; if(last<=mybb.lower*1.002){signal=signal||'call';votes++} else if(last>=mybb.upper*0.998){signal=signal||'put';votes++}} if(votes<2)return; // need 2 indicators
+        // try to click matching buttons
+        const btns=document.querySelectorAll('[class*=call],[class*=put],[class*=up],[class*=down]'); btns.forEach(b=>{try{ if((signal==='call'&&/call|up/i.test(b.className))||(signal==='put'&&/put|down/i.test(b.className))) b.click(); }catch(e){} });
+        // log trade
+        fetch(API+'/log-trade',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({licence_key:KEY||'unknown',asset:'auto',direction:signal,amount:1,result:'pending'})});}
+      if(!KEY){const k=prompt('Enter Licence Key:');if(!k) return;verify(k,function(d){if(d.valid){localStorage.setItem('qbot_key',k);injectButton();alert('Key valid');}else alert('Invalid Key: '+d.message);});} else {verify(KEY,function(d){if(d.valid){injectButton();} else {alert('Key invalid');localStorage.removeItem('qbot_key');}})} })`;
+      return code;
+    }
+
+    // Initialize UI
+  </script>
+</body>
+</html>
